@@ -31,3 +31,27 @@ export function getDailyByCodeBetweenDate(code, startDay, endDay) {
     url: '/api/search/daily/between3?code=' + code + '&startDay=' + startDay + '&endDay=' + endDay
   })
 }
+
+// 根据ts_code获取股票的周线信息
+export function getWeeklyByCode(code) {
+  return request({
+    method: 'GET',
+    url: '/api/search/weekly/' + code
+  })
+}
+
+// 根据ts_code获取股票的月线信息
+export function getMonthlyByCode(code) {
+  return request({
+    method: 'GET',
+    url: '/api/search/monthly/' + code
+  })
+}
+
+// 根据ts_code获取股票的半年内的数据分析信息
+export function getRecommendByCode(code) {
+  return request({
+    method: 'GET',
+    url: '/api/search/recommend/' + code
+  })
+}
