@@ -187,6 +187,56 @@
             </div>
           </el-col>
         </el-row>
+        <!-- 近半年来的股票信息分析 -->
+        <el-row>
+          <el-col :span="22" :offset="1">
+            <el-divider content-position="left">近半年股票数据分析</el-divider>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="24">
+            <div class="common" style="text-align: center">
+              <el-popover
+                placement="top-start"
+                title="计算公式"
+                width="300"
+                trigger="hover"
+                content="推荐指数=(总涨跌幅*100+上涨天数*1.0/总天数*100+净资产收益率*100+200)/5">
+                <i class="el-icon-question" slot="reference"></i>
+              </el-popover>
+              推荐指数：<span class="content big" :style="{'color':calculateColor(recommend_info.recommend)}">{{recommend_info.recommend}}</span>
+            </div>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="6" :offset="1">
+            <div class="common">
+              上涨天数：<span class="content big" style="color: #00FF00">{{recommend_info.up}}</span>
+            </div>
+          </el-col>
+          <el-col :span="6" :offset="2">
+            <div class="common">
+              下跌天数：<span class="content big" style="color: #FF0000">{{recommend_info.down}}</span>
+            </div>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="6" :offset="1">
+            <div class="common">
+              半年内总涨跌幅：<span class="content big">{{recommend_info.pctChg}}</span>
+            </div>
+          </el-col>
+          <el-col :span="6" :offset="2">
+            <div class="common">
+              近半年净利润：<span class="content big">{{recommend_info.profit}}</span>
+            </div>
+          </el-col>
+          <el-col :span="6" :offset="2">
+            <div class="common">
+              净资产收益率：<span class="content big">{{recommend_info.profitRate}}</span>
+            </div>
+          </el-col>
+        </el-row>
         <!-- K线图 -->
         <el-row>
           <el-col :span="22" :offset="1">
@@ -195,13 +245,11 @@
         </el-row>
         <el-row>
           <el-col :span="22" :offset="1">
-            <el-tabs v-model="activeName">
-              <el-tab-pane label="日线图" name="daily">
-                <div id="daily-k-line" class="graph"></div>
-              </el-tab-pane>
-              <el-tab-pane label="周线图" name="weekly"></el-tab-pane>
-              <el-tab-pane label="月线图" name="monthly"></el-tab-pane>
-            </el-tabs>
+            <div id="daily-k-line" class="graph"></div>
+            <br>
+            <div id="weekly-line" class="graph"></div>
+            <br>
+            <div id="monthly-line" class="graph"></div>
           </el-col>
         </el-row>
       </div>
@@ -211,7 +259,13 @@
 
 <script>
 import echarts from 'echarts'
-import {getShareInfoByCode, getCompanyInfoByCode, getLatestShareInfoByCode, getDailyByCodeBetweenDate} from "../../api/getData"
+import {getShareInfoByCode,
+        getCompanyInfoByCode,
+        getLatestShareInfoByCode,
+        getDailyByCodeBetweenDate,
+        getWeeklyByCode,
+        getMonthlyByCode,
+        getRecommendByCode} from "../../api/getData"
 import {BaiduMap, BmControl, BmView, BmAutoComplete, BmLocalSearch, BmMarker} from 'vue-baidu-map'
 export default {
   name: "index",
@@ -226,7 +280,7 @@ export default {
   data () {
     return {
       input: '',
-      activeName: 'daily',
+      activeName: 'weekly',
       info: {
         ts_code: '',
         symbol: '',
@@ -274,8 +328,20 @@ export default {
         center: {lng: 116.404, lat:39.915},
         zoom: 15
       },
+      recommend_info: {
+        pctChg: 0,
+        up: 0,
+        down: 0,
+        profit: 0,
+        profitRate: 0,
+        recommend: 0
+      },
       daily_share: [],
-      split_daily_share: []
+      split_daily_share: [],
+      weekly_share: [],
+      split_weekly_share: [],
+      monthly_share: [],
+      split_monthly_share: []
     }
   },
   methods: {
@@ -283,6 +349,10 @@ export default {
     initVal () {
       this.daily_share = []
       this.split_daily_share = []
+      this.weekly_share = []
+      this.split_weekly_share = []
+      this.monthly_share = []
+      this.split_monthly_share = []
       this.info.ts_code = this.$route.query.ts_code
       // 获取股票信息
       getShareInfoByCode(this.info.ts_code).then(res => {
@@ -347,6 +417,54 @@ export default {
         this.split_daily_share = this.splitData(this.daily_share)
         this.initDailyGraph()
       })
+      // 获取周线信息
+      getWeeklyByCode(this.info.ts_code).then(res4 => {
+        for (let i = res4.detail.length - 1; i >= 0; i--) {
+          let temp = []
+          temp.push(res4.detail[i].tradeDate)
+          temp.push(res4.detail[i].open)
+          temp.push(res4.detail[i].close)
+          temp.push(res4.detail[i].low)
+          temp.push(res4.detail[i].high)
+          temp.push(res4.detail[i].amount)
+          this.weekly_share.push(temp)
+        }
+        this.split_weekly_share = this.splitData(this.weekly_share)
+        this.initOtherGraph(this.split_weekly_share, '周线图', '周K', 'weekly-line')
+      })
+      // 获取月线信息
+      getMonthlyByCode(this.info.ts_code).then(res5 => {
+        for (let i = res5.detail.length - 1; i >= 0; i--) {
+          let temp = []
+          temp.push(res5.detail[i].tradeDate)
+          temp.push(res5.detail[i].open)
+          temp.push(res5.detail[i].close)
+          temp.push(res5.detail[i].low)
+          temp.push(res5.detail[i].high)
+          temp.push(res5.detail[i].amount)
+          this.monthly_share.push(temp)
+        }
+        this.split_monthly_share = this.splitData(this.monthly_share)
+        this.initOtherGraph(this.split_monthly_share, '月线图', '月k', 'monthly-line')
+      })
+      // 获取半年内的股票分析信息
+      getRecommendByCode(this.info.ts_code).then(res6 => {
+        let temp = res6.detail.pctChg
+        temp = temp.toFixed(2)
+        this.recommend_info.pctChg = temp
+        this.recommend_info.up = res6.detail.up
+        this.recommend_info.down = res6.detail.down
+        let temp1 = res6.detail.profit
+        temp1 = temp1.toFixed(3)
+        this.recommend_info.profit = temp1
+        let temp2 = res6.detail.profitRate
+        temp2 = temp2.toFixed(4)
+        this.recommend_info.profitRate = temp2
+        let temp3 = res6.detail.recommend
+        temp3 = (temp3 - 40) * 5
+        temp3 = temp3.toFixed(2)
+        this.recommend_info.recommend = temp3
+      })
     },
     // 获取真实地址
     getAddress(province, city){
@@ -381,6 +499,22 @@ export default {
       this.map_info.lat = lat
       this.zoom = e.target.getZoom()
     },
+    // 根据推荐指数改变颜色
+    calculateColor(value){
+      let color = ''
+      if (value <= 20) {
+        color = '#FF0000'
+      } else if (value <= 40 && value > 20) {
+        color = '#8000FF'
+      } else if (value <= 60 && value > 40) {
+        color = '#FFA500'
+      } else if (value <= 80 && value > 60) {
+        color = '#FFFF00'
+      } else if (value > 80) {
+        color = '#00FF00'
+      }
+      return color
+    },
     // 在该页查询股票信息
     searchShare(){
       this.$router.push({
@@ -398,25 +532,28 @@ export default {
       let categoryData = []
       let values = []
       let turnover = []
+      let closePrice = []
       for (let i = 0; i < rawData.length; i++) {
         categoryData.push(rawData[i].splice(0, 1)[0]);
         values.push(rawData[i])
         turnover.push(rawData[i][4])
+        closePrice.push(rawData[i][1])
       }
       return {
         categoryData: categoryData,
         values: values,
-        turnover: turnover
+        turnover: turnover,
+        closePrice: closePrice
       }
     },
     // 计算MA值
-    calculateMA(dayCount){
+    calculateMA(split_data, dayCount){
       let result = []
-      for (let i = 0, len = this.split_daily_share.values.length; i < len; i++){
+      for (let i = 0, len = split_data.values.length; i < len; i++){
         if (i < dayCount - 1) {
           let sum = 0
           for (let j = 0; j <= i;j++){
-            sum += this.split_daily_share.values[j][1]
+            sum += split_data.values[j][1]
           }
           let temp = sum / (i + 1)
           temp = temp.toFixed(2)
@@ -426,7 +563,7 @@ export default {
         }
         let sum = 0
         for (let j = 0; j < dayCount;j++){
-          sum += this.split_daily_share.values[i - j][1];
+          sum += split_data.values[i - j][1];
         }
         let temp = sum / dayCount
         temp = temp.toFixed(2)
@@ -434,16 +571,19 @@ export default {
       }
       return result
     },
-    initData(){
-      this.split_daily_share = this.splitData(this.daily_share)
-      console.log(this.split_daily_share)
-    },
+    // 绘制日线图
     initDailyGraph(){
       let myChart = echarts.init(document.getElementById('daily-k-line'))
       let option = {
+        title: {
+          text: '日线图',
+          textStyle: {
+            color: '#fff'
+          }
+        },
         backgroundColor: '#21202D',
         legend: {
-          data: ['日K', 'MA5', 'MA10', 'MA20', 'MA30'],
+          data: ['日K', 'MA5', 'MA10', 'MA20', 'MA30', '成交额'],
           inactiveColor: '#777',
           textStyle: {
             color: '#fff'
@@ -542,7 +682,7 @@ export default {
           {
             name: 'MA5',
             type: 'line',
-            data: this.calculateMA(5),
+            data: this.calculateMA(this.split_daily_share, 5),
             smooth: true,
             showSymbol: false,
             lineStyle: {
@@ -554,7 +694,7 @@ export default {
           {
             name: 'MA10',
             type: 'line',
-            data: this.calculateMA(10),
+            data: this.calculateMA(this.split_daily_share, 10),
             smooth: true,
             showSymbol: false,
             lineStyle: {
@@ -566,7 +706,7 @@ export default {
           {
             name: 'MA20',
             type: 'line',
-            data: this.calculateMA(20),
+            data: this.calculateMA(this.split_daily_share, 20),
             smooth: true,
             showSymbol: false,
             lineStyle: {
@@ -578,7 +718,7 @@ export default {
           {
             name: 'MA30',
             type: 'line',
-            data: this.calculateMA(30),
+            data: this.calculateMA(this.split_daily_share, 30),
             smooth: true,
             showSymbol: false,
             lineStyle: {
@@ -588,9 +728,140 @@ export default {
             }
           },
           {
-            name: 'amount',
+            name: '成交额',
             type: 'bar',
             data: this.split_daily_share.turnover,
+            yAxisIndex: 1,
+            color: 'blue'
+          }
+        ]
+      }
+      myChart.setOption(option)
+    },
+    // 绘制周线图
+    initOtherGraph(data, title, k, id){
+      let myChart = echarts.init(document.getElementById(id))
+      let option = {
+        title: {
+          text: title,
+          textStyle: {
+            color: '#fff'
+          }
+        },
+        backgroundColor: '#21202D',
+        legend: {
+          data: [k, '收盘价','成交额'],
+          inactiveColor: '#777',
+          textStyle: {
+            color: '#fff'
+          }
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            animation: false,
+            type: 'cross',
+            lineStyle: {
+              color: '#376df4',
+              width: 2,
+              opacity: 1
+            }
+          }
+        },
+        xAxis: {
+          type: 'category',
+          data: data.categoryData,
+          axisLine: {
+            lineStyle: {
+              color: '#8392A5'
+            }
+          }
+        },
+        yAxis: [{
+          name: 'price(价格)',
+          scale: true,
+          axisLine: {
+            lineStyle: {
+              color: '#8392A5'
+            }
+          },
+          splitLine: {
+            show: false
+          }
+        },
+          {
+            name: 'amount(成交额)',
+            type: 'value',
+            scale: true,
+            axisLine: {
+              lineStyle: {
+                color: '#8392A5'
+              }
+            },
+            splitLine: {
+              show: false
+            }
+          }],
+        grid: {
+          bottom: 80,
+          right: 100
+        },
+        dataZoom: [{
+          textStyle: {
+            color: '#8392A5'
+          },
+          handleIcon: 'M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
+          handleSize: '80%',
+          height: '20px',
+          dataBackground: {
+            areaStyle: {
+              color: '#8392A5'
+            },
+            lineStyle: {
+              opacity: 0.8,
+              color: '#8392A5'
+            }
+          },
+          handleStyle: {
+            color: '#fff',
+            shadowBlur: 3,
+            shadowColor: 'rgba(0, 0, 0, 0.6)',
+            shadowOffsetX: 2,
+            shadowOffsetY: 2
+          }
+        }, {
+          type: 'inside'
+        }],
+        animation: false,
+        series: [{
+          type: 'candlestick',
+          name: '周K',
+          data: data.values,
+          itemStyle: {
+            normal: {
+              color: '#FD1050',
+              color0: '#0CF49B',
+              borderColor: '#FD1050',
+              borderColor0: '#0CF49B'
+            }
+          }
+        },
+          {
+            name: '收盘价',
+            type: 'line',
+            data: data.closePrice,
+            smooth: false,
+            showSymbol: false,
+            lineStyle: {
+              normal: {
+                width: 1
+              }
+            }
+          },
+          {
+            name: '成交额',
+            type: 'bar',
+            data: data.turnover,
             yAxisIndex: 1,
             color: 'blue'
           }
@@ -638,7 +909,7 @@ export default {
   &-body{
     background: rgba(255,255,255,0.8);
     width: 80%;
-    height: 2000px;
+    /*height: 2000px;*/
     margin: auto;
     color: black;
     border-radius: 5px;
@@ -655,13 +926,12 @@ export default {
         .content{
           font-weight: bolder;
         }
+        .big{
+          font-size: 30px;
+        }
       }
       .left1{
         text-align: left;
-      }
-      .card{
-        height: 200px;
-        background: rgba(255,255,210,0.7);
       }
       .website{
         color: blue;
