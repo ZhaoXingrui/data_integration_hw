@@ -31,3 +31,11 @@ export function getDailyByCodeBetweenDate(code, startDay, endDay) {
     url: '/api/search/daily/between3?code=' + code + '&startDay=' + startDay + '&endDay=' + endDay
   })
 }
+
+// 根据ts_code，startDate和endDate获取某一指数的日收尾价
+export function getDailyCloseBetweenDate(code, startDate, endDate)  {
+  return request({
+    method:'GET',
+    url: '/api/search/indexDaily/between3?code=' + code + '&startDay=' + startDate + '&endDay=' + endDate
+  })
+}
